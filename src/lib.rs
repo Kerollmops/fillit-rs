@@ -1,8 +1,11 @@
+use std::fmt::Write;
+use std::{fmt, str};
+
 use anyhow::{ensure, Context};
 
 mod tetrimino;
 
-use self::tetrimino::Tetrimino;
+pub use self::tetrimino::Tetrimino;
 
 pub fn parse_tetriminos(text: &str) -> anyhow::Result<Vec<Tetrimino>> {
     let tetriminos: anyhow::Result<Vec<_>> = text.split("\n\n").enumerate().map(|(i, block)| {
@@ -12,6 +15,52 @@ pub fn parse_tetriminos(text: &str) -> anyhow::Result<Vec<Tetrimino>> {
     let tetriminos = tetriminos?;
     ensure!(tetriminos.len() <= 26, "too much tetriminos (max is 26)");
     Ok(tetriminos)
+}
+
+#[derive(Debug)]
+pub struct Position {
+    pub col: usize,
+    pub row: usize,
+}
+
+impl Position {
+    pub fn new(col: usize, row: usize) -> Position {
+        Position { col, row }
+    }
+}
+
+pub struct VisualMap {
+    tetriminos: Vec<(Tetrimino, Position)>,
+    size: usize,
+}
+
+impl VisualMap {
+    pub fn new(tetriminos: Vec<(Tetrimino, Position)>, size: usize) -> VisualMap {
+        VisualMap { tetriminos, size }
+    }
+}
+
+impl fmt::Display for VisualMap {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut map = vec![b'.'; self.size * self.size];
+
+        for ((t, p), c) in self.tetriminos.iter().zip(b'A'..) {
+            let tetrimino_map = t.boolean_map();
+            for (line, tline) in map.chunks_mut(self.size).skip(p.row).zip(&tetrimino_map) {
+                for (tile, full) in line.iter_mut().skip(p.col).zip(tline) {
+                    if *full { *tile = c }
+                }
+            }
+        }
+
+        for line in map.chunks(self.size) {
+            let line = str::from_utf8(line).unwrap();
+            f.write_str(line)?;
+            f.write_char('\n')?;
+        }
+
+        f.write_char('\n')
+    }
 }
 
 #[cfg(test)]

@@ -1,5 +1,7 @@
 use std::str;
+
 use anyhow::{anyhow, ensure, Context};
+use Tetrimino::*;
 
 const VERTICAL_BAR: [[bool; 4]; 4] = [
     [true,  false, false, false],
@@ -304,7 +306,6 @@ impl Tetrimino {
     }
 
     fn from_buffer_4x4(buffer: [[bool; 4]; 4]) -> Option<Tetrimino> {
-        use Tetrimino::*;
         match buffer {
             VERTICAL_BAR => Some(VerticalBar),
             HORIZONTAL_BAR => Some(HorizontalBar),
@@ -326,6 +327,30 @@ impl Tetrimino {
             PODIUM_ROTATE180 => Some(PodiumRotate180),
             PODIUM_ROTATE270 => Some(PodiumRotate270),
             _otherwise => None,
+        }
+    }
+
+    pub fn boolean_map(&self) -> [[bool; 4]; 4] {
+        match self {
+            VerticalBar => VERTICAL_BAR,
+            HorizontalBar => HORIZONTAL_BAR,
+            Square => SQUARE,
+            NormalL => NORMAL_L,
+            NormalLRotate90 => NORMAL_L_ROTATE90,
+            NormalLRotate180 => NORMAL_L_ROTATE180,
+            NormalLRotate270 => NORMAL_L_ROTATE270,
+            MirrorL => MIRROR_L,
+            MirrorLRotate90 => MIRROR_L_ROTATE90,
+            MirrorLRotate180 => MIRROR_L_ROTATE180,
+            MirrorLRotate270 => MIRROR_L_ROTATE270,
+            NormalStairs => NORMAL_STAIRS,
+            NormalStairsRotate90 => NORMAL_STAIRS_ROTATE90,
+            MirrorStairs => MIRROR_STAIRS,
+            MirrorStairsRotate90 => MIRROR_STAIRS_ROTATE90,
+            Podium => PODIUM,
+            PodiumRotate90 => PODIUM_ROTATE90,
+            PodiumRotate180 => PODIUM_ROTATE180,
+            PodiumRotate270 => PODIUM_ROTATE270,
         }
     }
 }
