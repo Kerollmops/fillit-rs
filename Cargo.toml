@@ -6,3 +6,10 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.38"
+enum-ordinalize = "3.1.9"
+
+[profile.release]
+debug = true
+
+[profile.bench]
+debug = true

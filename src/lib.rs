@@ -3,9 +3,12 @@ use std::{fmt, str};
 
 use anyhow::{ensure, Context};
 
+mod boolean_maps;
+mod pieces;
 mod tetrimino;
 
-pub use self::tetrimino::Tetrimino;
+pub use self::tetrimino::{Tetrimino, Piece};
+use BacktrackResult::*;
 
 pub fn parse_tetriminos(text: &str) -> anyhow::Result<Vec<Tetrimino>> {
     let tetriminos: anyhow::Result<Vec<_>> = text.split("\n\n").enumerate().map(|(i, block)| {
@@ -17,7 +20,171 @@ pub fn parse_tetriminos(text: &str) -> anyhow::Result<Vec<Tetrimino>> {
     Ok(tetriminos)
 }
 
-#[derive(Debug)]
+struct Sandbox {
+    /// The farthest position for a given piece type.
+    far: [Position; Tetrimino::variant_count()],
+    buff: [u16; 16],
+    size: usize,
+}
+
+impl Sandbox {
+    pub fn new(count: usize) -> Option<Sandbox> {
+        fn minimum_sandbox(nb_tetriminos: usize) -> Option<usize> {
+            let sqrt_n_x_4 = [0, 2, 3, 4, 4, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 8,
+                              9, 9, 9, 9, 10, 10, 10, 10, 10, 11];
+            sqrt_n_x_4.get(nb_tetriminos).copied()
+        }
+
+        let mut sandbox = Sandbox {
+            far: Default::default(),
+            buff: [u16::max_value(); 16],
+            size: minimum_sandbox(count)?,
+        };
+        sandbox.generate_fences();
+        Some(sandbox)
+    }
+
+    pub fn size(&self) -> usize {
+        self.size
+    }
+
+    pub fn increase_size(&mut self) -> bool {
+        if self.size <= 21 { // TODO ????
+            self.size += 1;
+            self.far.fill(Position::new(0, 0));
+            self.generate_fences();
+            true
+        } else {
+            false
+        }
+    }
+
+    fn generate_fences(&mut self) {
+        self.buff.fill(u16::max_value());
+        for line in self.buff.iter_mut().take(self.size) {
+            *line >>= self.size;
+        }
+    }
+}
+
+impl fmt::Debug for Sandbox {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for line in &self.buff {
+            writeln!(f, "{:016b}", line)?;
+        }
+        Ok(())
+    }
+}
+
+struct Tetriminos {
+    types: [usize; 26],
+    jump_columns: [usize; 26],
+    sizes: [Position; 26],
+    pieces: [Piece; 26],
+    count: usize,
+}
+
+impl Tetriminos {
+    fn from_tetriminos(tetriminos: &[Tetrimino]) -> Tetriminos {
+        let mut pieces = [Piece::uninit(); 26];
+        let mut sizes = [Position::default(); 26];
+        let mut types = [0; 26];
+        let mut jump_columns = [0; 26];
+
+        pieces.iter_mut().zip(tetriminos).for_each(|(p, tet)| *p = tet.piece());
+        types.iter_mut().zip(tetriminos).for_each(|(t, tet)| *t = tet.ordinal());
+        sizes.iter_mut().zip(tetriminos).for_each(|(s, tet)| *s = tet.size());
+        jump_columns.iter_mut().zip(tetriminos).for_each(|(j, tet)| *j = tet.jump_columns());
+
+        Tetriminos {
+            types,
+            jump_columns,
+            sizes,
+            pieces,
+            count: tetriminos.len(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum BacktrackResult {
+    SolutionFound,
+    NeedNewMap,
+    Continue,
+}
+
+fn can_write_tetriminos(mut piece: Piece, pos: &Position, sandbox: &Sandbox) -> bool {
+    piece.shift_right(pos.col);
+    unsafe {
+           (piece.parts[0] & sandbox.buff[pos.row + 0]) == 0
+        && (piece.parts[1] & sandbox.buff[pos.row + 1]) == 0
+        && (piece.parts[2] & sandbox.buff[pos.row + 2]) == 0
+        && (piece.parts[3] & sandbox.buff[pos.row + 3]) == 0
+    }
+}
+
+fn xor_piece(mut piece: Piece, pos: &Position, sandbox: &mut Sandbox) {
+    piece.shift_right(pos.col);
+    unsafe {
+        sandbox.buff[pos.row + 0] ^= piece.parts[0];
+        sandbox.buff[pos.row + 1] ^= piece.parts[1];
+        sandbox.buff[pos.row + 2] ^= piece.parts[2];
+        sandbox.buff[pos.row + 3] ^= piece.parts[3];
+    }
+}
+
+fn backtrack(
+    tetriminos: &Tetriminos,
+    i: usize,
+    sandbox: &mut Sandbox,
+    solution: &mut Vec<Position>,
+) -> BacktrackResult
+{
+    let ttype = tetriminos.types[i];
+    let tsize = tetriminos.sizes[i];
+    let tpiece = tetriminos.pieces[i];
+    let saved_farthest = sandbox.far[ttype];
+    let mut pos = sandbox.far[ttype];
+
+    while sandbox.size.checked_sub(tsize.row).map_or(false, |s| pos.row <= s) {
+        while sandbox.size.checked_sub(tsize.col).map_or(false, |s| pos.col <= s) {
+            if can_write_tetriminos(tpiece, &pos, sandbox) {
+                xor_piece(tpiece, &pos, sandbox);
+                sandbox.far[ttype].row = pos.row;
+                sandbox.far[ttype].col = pos.col + tetriminos.jump_columns[i];
+                if i + 1 == tetriminos.count || backtrack(tetriminos, i + 1, sandbox, solution) == SolutionFound {
+                    solution.push(pos);
+                    return SolutionFound;
+                }
+                xor_piece(tpiece, &pos, sandbox);
+            }
+            pos.col += 1;
+        }
+        pos.row += 1;
+        pos.col = 0;
+    }
+    sandbox.far[ttype] = saved_farthest;
+
+    if i == 0 { NeedNewMap } else { Continue }
+}
+
+pub fn find_best_fit(raw_tetriminos: &[Tetrimino]) -> Option<VisualMap> {
+    let mut solution = Vec::with_capacity(raw_tetriminos.len());
+    let mut sandbox = Sandbox::new(raw_tetriminos.len())?;
+    let tetriminos = Tetriminos::from_tetriminos(raw_tetriminos);
+
+    while backtrack(&tetriminos, 0, &mut sandbox, &mut solution) == NeedNewMap {
+        // eprintln!("increase sandbox size to {}", sandbox.size() + 1);
+        if !sandbox.increase_size() {
+            return None;
+        }
+    }
+
+    let solution = raw_tetriminos.iter().copied().zip(solution.iter().rev().copied()).collect();
+    Some(VisualMap::new(solution, sandbox.size()))
+}
+
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Position {
     pub col: usize,
     pub row: usize,
@@ -59,7 +226,7 @@ impl fmt::Display for VisualMap {
             f.write_char('\n')?;
         }
 
-        f.write_char('\n')
+        Ok(())
     }
 }
 
@@ -155,3 +322,4 @@ mod tests {
         }
     }
 }
+

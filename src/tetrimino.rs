@@ -1,124 +1,13 @@
 use std::str;
 
 use anyhow::{anyhow, ensure, Context};
+use enum_ordinalize::Ordinalize;
+
+use crate::Position;
 use Tetrimino::*;
 
-const VERTICAL_BAR: [[bool; 4]; 4] = [
-    [true,  false, false, false],
-    [true,  false, false, false],
-    [true,  false, false, false],
-    [true,  false, false, false]
-];
-const HORIZONTAL_BAR: [[bool; 4]; 4] = [
-    [true,  true,  true,  true],
-    [false, false, false, false],
-    [false, false, false, false],
-    [false, false, false, false],
-];
-const SQUARE: [[bool; 4]; 4] = [
-    [true,  true,  false, false],
-    [true,  true,  false, false],
-    [false, false, false, false],
-    [false, false, false, false],
-];
-const NORMAL_L: [[bool; 4]; 4] = [
-    [true,  false, false, false],
-    [true,  false, false, false],
-    [true,  true,  false, false],
-    [false, false, false, false],
-];
-const NORMAL_L_ROTATE90: [[bool; 4]; 4] = [
-    [false, false, true,  false],
-    [true,  true,  true,  false],
-    [false, false, false, false],
-    [false, false, false, false],
-];
-const NORMAL_L_ROTATE180: [[bool; 4]; 4] = [
-    [true,  true,  false, false],
-    [false, true,  false, false],
-    [false, true,  false, false],
-    [false, false, false, false],
-];
-const NORMAL_L_ROTATE270: [[bool; 4]; 4] = [
-    [true,  true,  true,  false],
-    [true,  false, false, false],
-    [false, false, false, false],
-    [false, false, false, false],
-];
-const MIRROR_L: [[bool; 4]; 4] = [
-    [false, true,  false, false],
-    [false, true,  false, false],
-    [true,  true,  false, false],
-    [false, false, false, false],
-];
-const MIRROR_L_ROTATE90: [[bool; 4]; 4] = [
-    [true,  true,  true,  false],
-    [false, false, true,  false],
-    [false, false, false, false],
-    [false, false, false, false],
-];
-const MIRROR_L_ROTATE180: [[bool; 4]; 4] = [
-    [true,  true,  false, false],
-    [true,  false, false, false],
-    [true,  false, false, false],
-    [false, false, false, false],
-];
-const MIRROR_L_ROTATE270: [[bool; 4]; 4] = [
-    [true,  false, false, false],
-    [true,  true,  true,  false],
-    [false, false, false, false],
-    [false, false, false, false],
-];
-const NORMAL_STAIRS: [[bool; 4]; 4] = [
-    [false, true,  true,  false],
-    [true,  true,  false, false],
-    [false, false, false, false],
-    [false, false, false, false],
-];
-const NORMAL_STAIRS_ROTATE90: [[bool; 4]; 4] = [
-    [true,  false, false, false],
-    [true,  true,  false, false],
-    [false, true,  false, false],
-    [false, false, false, false],
-];
-const MIRROR_STAIRS: [[bool; 4]; 4] = [
-    [true,  true,  false, false],
-    [false, true,  true,  false],
-    [false, false, false, false],
-    [false, false, false, false],
-];
-const MIRROR_STAIRS_ROTATE90: [[bool; 4]; 4] = [
-    [false, true,  false, false],
-    [true,  true,  false, false],
-    [true,  false, false, false],
-    [false, false, false, false],
-];
-const PODIUM: [[bool; 4]; 4] = [
-    [false, true,  false, false],
-    [true,  true,  true,  false],
-    [false, false, false, false],
-    [false, false, false, false],
-];
-const PODIUM_ROTATE90: [[bool; 4]; 4] = [
-    [false, true,  false, false],
-    [true,  true,  false, false],
-    [false, true,  false, false],
-    [false, false, false, false],
-];
-const PODIUM_ROTATE180: [[bool; 4]; 4] = [
-    [true,  true,  true,  false],
-    [false, true,  false, false],
-    [false, false, false, false],
-    [false, false, false, false],
-];
-const PODIUM_ROTATE270: [[bool; 4]; 4] = [
-    [true,  false, false, false],
-    [true,  true,  false, false],
-    [true,  false, false, false],
-    [false, false, false, false],
-];
-
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Ordinalize)]
+#[repr(usize)]
 pub enum Tetrimino {
     /// ```text
     /// #...
@@ -306,6 +195,7 @@ impl Tetrimino {
     }
 
     fn from_buffer_4x4(buffer: [[bool; 4]; 4]) -> Option<Tetrimino> {
+        use crate::boolean_maps::*;
         match buffer {
             VERTICAL_BAR => Some(VerticalBar),
             HORIZONTAL_BAR => Some(HorizontalBar),
@@ -330,7 +220,8 @@ impl Tetrimino {
         }
     }
 
-    pub fn boolean_map(&self) -> [[bool; 4]; 4] {
+    pub const fn boolean_map(&self) -> [[bool; 4]; 4] {
+        use crate::boolean_maps::*;
         match self {
             VerticalBar => VERTICAL_BAR,
             HorizontalBar => HORIZONTAL_BAR,
@@ -352,5 +243,97 @@ impl Tetrimino {
             PodiumRotate180 => PODIUM_ROTATE180,
             PodiumRotate270 => PODIUM_ROTATE270,
         }
+    }
+
+    pub const fn piece(&self) -> Piece {
+        use crate::pieces::*;
+        match self {
+            VerticalBar => VERTICAL_BAR,
+            HorizontalBar => HORIZONTAL_BAR,
+            Square => SQUARE,
+            NormalL => NORMAL_L,
+            NormalLRotate90 => NORMAL_L_ROTATE90,
+            NormalLRotate180 => NORMAL_L_ROTATE180,
+            NormalLRotate270 => NORMAL_L_ROTATE270,
+            MirrorL => MIRROR_L,
+            MirrorLRotate90 => MIRROR_L_ROTATE90,
+            MirrorLRotate180 => MIRROR_L_ROTATE180,
+            MirrorLRotate270 => MIRROR_L_ROTATE270,
+            NormalStairs => NORMAL_STAIRS,
+            NormalStairsRotate90 => NORMAL_STAIRS_ROTATE90,
+            MirrorStairs => MIRROR_STAIRS,
+            MirrorStairsRotate90 => MIRROR_STAIRS_ROTATE90,
+            Podium => PODIUM,
+            PodiumRotate90 => PODIUM_ROTATE90,
+            PodiumRotate180 => PODIUM_ROTATE180,
+            PodiumRotate270 => PODIUM_ROTATE270,
+        }
+    }
+
+    /// Defines the amount of columns that we can skip based on
+    /// the previously tried piece position.
+    pub const fn jump_columns(&self) -> usize {
+        match self {
+            VerticalBar => 1,
+            HorizontalBar => 4,
+            Square => 2,
+            NormalL => 2,
+            NormalLRotate90 => 3,
+            NormalLRotate180 => 2,
+            NormalLRotate270 => 3,
+            MirrorL => 2,
+            MirrorLRotate90 => 3,
+            MirrorLRotate180 => 2,
+            MirrorLRotate270 => 3,
+            NormalStairs => 2,
+            NormalStairsRotate90 => 2,
+            MirrorStairs => 2,
+            MirrorStairsRotate90 => 2,
+            Podium => 3,
+            PodiumRotate90 => 2,
+            PodiumRotate180 => 3,
+            PodiumRotate270 => 2,
+        }
+    }
+
+    pub const fn size(&self) -> Position {
+        match self {
+            VerticalBar => Position { col: 1, row: 4 },
+            HorizontalBar => Position { col: 4, row: 1 },
+            Square => Position { col: 2, row: 2 },
+            NormalL => Position { col: 2, row: 3 },
+            NormalLRotate90 => Position { col: 3, row: 2 },
+            NormalLRotate180 => Position { col: 2, row: 3 },
+            NormalLRotate270 => Position { col: 3, row: 2 },
+            MirrorL => Position { col: 2, row: 3 },
+            MirrorLRotate90 => Position { col: 3, row: 2 },
+            MirrorLRotate180 => Position { col: 2, row: 3 },
+            MirrorLRotate270 => Position { col: 3, row: 2 },
+            NormalStairs => Position { col: 3, row: 2 },
+            NormalStairsRotate90 => Position { col: 2, row: 3 },
+            MirrorStairs => Position { col: 3, row: 2 },
+            MirrorStairsRotate90 => Position { col: 2, row: 3 },
+            Podium => Position { col: 3, row: 2 },
+            PodiumRotate90 => Position { col: 2, row: 3 },
+            PodiumRotate180 => Position { col: 3, row: 2 },
+            PodiumRotate270 => Position { col: 2, row: 3 },
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+pub union Piece {
+    pub parts: [u16; 4],
+    pub full: u64,
+}
+
+impl Piece {
+    pub fn uninit() -> Piece {
+        Piece { full: 0 }
+    }
+
+    #[inline]
+    pub fn shift_right(&mut self, shift: usize) {
+        unsafe { self.full >>= shift }
     }
 }
