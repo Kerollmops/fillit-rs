@@ -308,6 +308,59 @@ mod tests {
         VALID_I_26,
     ];
 
+    const ANSWER_1: &str =               include_str!("../tests/answers/valid_1.answer");
+    const ANSWER_2: &str =               include_str!("../tests/answers/valid_2.answer");
+    const ANSWER_3: &str =               include_str!("../tests/answers/valid_3.answer");
+    const ANSWER_4: &str =               include_str!("../tests/answers/valid_4.answer");
+    const ANSWER_EACH_PIECE: &str =      include_str!("../tests/answers/valid_each_piece.answer");
+    const ANSWER_HARD: &str =            include_str!("../tests/answers/valid_hard.answer");
+    const ANSWER_HARD_FORUM: &str =      include_str!("../tests/answers/valid_hard_forum.answer");
+    const ANSWER_HARD_FORUM_10: &str =   include_str!("../tests/answers/valid_hard_forum_10.answer");
+    const ANSWER_HARD_FORUM_11: &str =   include_str!("../tests/answers/valid_hard_forum_11.answer");
+    const ANSWER_HARD_FORUM_12: &str =   include_str!("../tests/answers/valid_hard_forum_12.answer");
+    const ANSWER_HARD_FORUM_13: &str =   include_str!("../tests/answers/valid_hard_forum_13.answer");
+    const ANSWER_HARD_FORUM_14: &str =   include_str!("../tests/answers/valid_hard_forum_14.answer");
+    const ANSWER_HARD_FORUM_15: &str =   include_str!("../tests/answers/valid_hard_forum_15.answer");
+    const ANSWER_HARD_FORUM_16: &str =   include_str!("../tests/answers/valid_hard_forum_16.answer");
+    const ANSWER_HARD_FORUM_17: &str =   include_str!("../tests/answers/valid_hard_forum_17.answer");
+    const ANSWER_HARD_FORUM_18: &str =   include_str!("../tests/answers/valid_hard_forum_18.answer");
+    const ANSWER_HARD_FORUM_19: &str =   include_str!("../tests/answers/valid_hard_forum_19.answer");
+    const ANSWER_HARD_FORUM_20: &str =   include_str!("../tests/answers/valid_hard_forum_20.answer");
+    const ANSWER_HARD_FORUM_21: &str =   include_str!("../tests/answers/valid_hard_forum_21.answer");
+    const ANSWER_HARD_FORUM_22: &str =   include_str!("../tests/answers/valid_hard_forum_22.answer");
+    const ANSWER_HARD_FORUM_23: &str =   include_str!("../tests/answers/valid_hard_forum_23.answer");
+    const ANSWER_I_16: &str =            include_str!("../tests/answers/valid_I_16.answer");
+    const ANSWER_I_26: &str =            include_str!("../tests/answers/valid_I_26.answer");
+
+    const EASY_MAPS_ANSWERS: &[(&str, &str)] = &[
+        (VALID_1, ANSWER_1),
+        (VALID_2, ANSWER_2),
+        (VALID_3, ANSWER_3),
+        (VALID_4, ANSWER_4),
+        (VALID_EACH_PIECE, ANSWER_EACH_PIECE),
+        (VALID_HARD, ANSWER_HARD),
+        (VALID_HARD_FORUM_10, ANSWER_HARD_FORUM_10),
+        (VALID_HARD_FORUM_11, ANSWER_HARD_FORUM_11),
+        (VALID_HARD_FORUM_12, ANSWER_HARD_FORUM_12),
+        (VALID_HARD_FORUM_13, ANSWER_HARD_FORUM_13),
+        (VALID_HARD_FORUM_14, ANSWER_HARD_FORUM_14),
+        (VALID_HARD_FORUM_15, ANSWER_HARD_FORUM_15),
+        (VALID_HARD_FORUM_16, ANSWER_HARD_FORUM_16),
+        (VALID_HARD_FORUM_17, ANSWER_HARD_FORUM_17),
+        (VALID_HARD_FORUM_21, ANSWER_HARD_FORUM_21),
+        (VALID_HARD_FORUM_22, ANSWER_HARD_FORUM_22),
+        (VALID_I_16, ANSWER_I_16),
+        (VALID_I_26, ANSWER_I_26),
+    ];
+
+    const HARD_MAPS_ANSWERS: &[(&str, &str)] = &[
+        (VALID_HARD_FORUM, ANSWER_HARD_FORUM),
+        (VALID_HARD_FORUM_18, ANSWER_HARD_FORUM_19),
+        (VALID_HARD_FORUM_18, ANSWER_HARD_FORUM_18),
+        (VALID_HARD_FORUM_20, ANSWER_HARD_FORUM_20),
+        (VALID_HARD_FORUM_23, ANSWER_HARD_FORUM_23),
+    ];
+
     #[test]
     fn valid_maps() {
         for (i, map) in VALIDS.iter().enumerate() {
@@ -321,6 +374,27 @@ mod tests {
         for (i, map) in NOT_VALIDS.iter().enumerate() {
             eprintln!("testing map #{}", i);
             parse_tetriminos(map).unwrap_err();
+        }
+    }
+
+    #[test]
+    fn valid_easy_answer_maps() {
+        for (i, (map, answer)) in EASY_MAPS_ANSWERS.iter().enumerate() {
+            eprintln!("testing map #{}", i);
+            let tetriminos = parse_tetriminos(map).unwrap();
+            let map = find_best_fit(&tetriminos);
+            assert_eq!(&map.to_string(), answer);
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn valid_hard_answer_maps() {
+        for (i, (map, answer)) in HARD_MAPS_ANSWERS.iter().enumerate() {
+            eprintln!("testing map #{}", i);
+            let tetriminos = parse_tetriminos(map).unwrap();
+            let map = find_best_fit(&tetriminos);
+            assert_eq!(&map.to_string(), answer);
         }
     }
 }
