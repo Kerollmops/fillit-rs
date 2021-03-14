@@ -4,10 +4,15 @@ use std::{fmt, str};
 use anyhow::{ensure, Context};
 
 mod boolean_maps;
+mod piece;
 mod pieces;
+mod playground;
 mod tetrimino;
 
-pub use self::tetrimino::{Tetrimino, Piece};
+pub use self::piece::Piece;
+pub use self::playground::Playground;
+pub use self::tetrimino::Tetrimino;
+
 use BacktrackResult::*;
 
 pub fn parse_tetriminos(text: &str) -> anyhow::Result<Vec<Tetrimino>> {
@@ -18,58 +23,6 @@ pub fn parse_tetriminos(text: &str) -> anyhow::Result<Vec<Tetrimino>> {
     let tetriminos = tetriminos?;
     ensure!(tetriminos.len() <= 26, "too much tetriminos (max is 26)");
     Ok(tetriminos)
-}
-
-struct Sandbox {
-    /// The farthest position for a given piece type.
-    far: [Position; Tetrimino::variant_count()],
-    buff: [u16; 16],
-    size: usize,
-}
-
-impl Sandbox {
-    pub fn from_number_tetriminos(count: usize) -> Sandbox {
-        fn minimum_sandbox(nb_tetriminos: usize) -> usize {
-            let sqrt_n_x_4 = [0, 2, 3, 4, 4, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 8,
-                              9, 9, 9, 9, 10, 10, 10, 10, 10, 11];
-            sqrt_n_x_4.get(nb_tetriminos).copied().unwrap_or(11)
-        }
-
-        let size = minimum_sandbox(count);
-        Sandbox::from_size(size)
-    }
-
-    pub fn from_size(size: usize) -> Sandbox {
-        assert!(size <= 16 * 16);
-
-        let mut sandbox = Sandbox {
-            far: Default::default(),
-            buff: [u16::max_value(); 16],
-            size,
-        };
-        sandbox.generate_fences();
-        sandbox
-    }
-
-    pub fn size(&self) -> usize {
-        self.size
-    }
-
-    fn generate_fences(&mut self) {
-        self.buff.fill(u16::max_value());
-        for line in self.buff.iter_mut().take(self.size) {
-            *line >>= self.size;
-        }
-    }
-}
-
-impl fmt::Debug for Sandbox {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for line in &self.buff {
-            writeln!(f, "{:016b}", line)?;
-        }
-        Ok(())
-    }
 }
 
 struct Tetriminos {
@@ -109,53 +62,53 @@ enum BacktrackResult {
     Continue,
 }
 
-fn can_write_tetriminos(mut piece: Piece, pos: &Position, sandbox: &Sandbox) -> bool {
+fn can_write_tetriminos(mut piece: Piece, pos: &Position, pg: &Playground) -> bool {
     piece.shift_right(pos.col);
     unsafe {
-           (piece.parts[0] & sandbox.buff[pos.row + 0]) == 0
-        && (piece.parts[1] & sandbox.buff[pos.row + 1]) == 0
-        && (piece.parts[2] & sandbox.buff[pos.row + 2]) == 0
-        && (piece.parts[3] & sandbox.buff[pos.row + 3]) == 0
+           (piece.parts[0] & pg.buff[pos.row + 0]) == 0
+        && (piece.parts[1] & pg.buff[pos.row + 1]) == 0
+        && (piece.parts[2] & pg.buff[pos.row + 2]) == 0
+        && (piece.parts[3] & pg.buff[pos.row + 3]) == 0
     }
 }
 
-fn xor_piece(mut piece: Piece, pos: &Position, sandbox: &mut Sandbox) {
+fn xor_piece(mut piece: Piece, pos: &Position, pg: &mut Playground) {
     piece.shift_right(pos.col);
     unsafe {
-        sandbox.buff[pos.row + 0] ^= piece.parts[0];
-        sandbox.buff[pos.row + 1] ^= piece.parts[1];
-        sandbox.buff[pos.row + 2] ^= piece.parts[2];
-        sandbox.buff[pos.row + 3] ^= piece.parts[3];
+        pg.buff[pos.row + 0] ^= piece.parts[0];
+        pg.buff[pos.row + 1] ^= piece.parts[1];
+        pg.buff[pos.row + 2] ^= piece.parts[2];
+        pg.buff[pos.row + 3] ^= piece.parts[3];
     }
 }
 
-fn backtrack(tets: &Tetriminos, i: usize, sandbox: &mut Sandbox, solution: &mut Vec<Position>) -> BacktrackResult {
+fn backtrack(tets: &Tetriminos, i: usize, pg: &mut Playground, solution: &mut Vec<Position>) -> BacktrackResult {
     let ttype = tets.types[i];
     let tsize = tets.sizes[i];
     let tpiece = tets.pieces[i];
-    let saved_farthest = sandbox.far[ttype];
+    let saved_farthest = pg.far[ttype];
 
     // We use the previously found fartest position for this tetriminos type
     // to start searching for the next position.
-    let mut pos = sandbox.far[ttype];
+    let mut pos = pg.far[ttype];
 
     // It is safe to do a wrapping_sub as it is not possible to wrap.
-    while pos.row <= sandbox.size.wrapping_sub(tsize.row) {
-        while pos.col <= sandbox.size.wrapping_sub(tsize.col) {
-            if can_write_tetriminos(tpiece, &pos, sandbox) {
-                xor_piece(tpiece, &pos, sandbox);
+    while pos.row <= pg.size.wrapping_sub(tsize.row) {
+        while pos.col <= pg.size.wrapping_sub(tsize.col) {
+            if can_write_tetriminos(tpiece, &pos, pg) {
+                xor_piece(tpiece, &pos, pg);
 
                 // We saved the farthest position found for this tetrimino type.
-                sandbox.far[ttype] = Position {
+                pg.far[ttype] = Position {
                     row: pos.row,
                     col: pos.col + tets.jump_columns[i],
                 };
 
-                if i + 1 == tets.count || backtrack(tets, i + 1, sandbox, solution) == SolutionFound {
+                if i + 1 == tets.count || backtrack(tets, i + 1, pg, solution) == SolutionFound {
                     solution.push(pos);
                     return SolutionFound;
                 }
-                xor_piece(tpiece, &pos, sandbox);
+                xor_piece(tpiece, &pos, pg);
             }
             pos.col += 1;
         }
@@ -165,7 +118,7 @@ fn backtrack(tets: &Tetriminos, i: usize, sandbox: &mut Sandbox, solution: &mut 
 
     // We write back the previously found fartest position for this tetrimino type,
     // as we were not able to find a solution with our best position.
-    sandbox.far[ttype] = saved_farthest;
+    pg.far[ttype] = saved_farthest;
 
     if i == 0 { NeedNewMap } else { Continue }
 }
@@ -173,17 +126,17 @@ fn backtrack(tets: &Tetriminos, i: usize, sandbox: &mut Sandbox, solution: &mut 
 pub fn find_best_fit(raw_tetriminos: &[Tetrimino]) -> VisualMap {
     let tetriminos_count = raw_tetriminos.len();
     let mut solution = Vec::with_capacity(tetriminos_count);
-    let mut sandbox = Sandbox::from_number_tetriminos(tetriminos_count);
+    let mut pg = Playground::from_number_tetriminos(tetriminos_count);
     let tetriminos = Tetriminos::from_tetriminos(raw_tetriminos);
 
-    eprintln!("Try to fit {} tetriminos in a {} sized map.", tetriminos_count, sandbox.size());
-    while backtrack(&tetriminos, 0, &mut sandbox, &mut solution) == NeedNewMap {
-        sandbox = Sandbox::from_size(sandbox.size() + 1);
-        eprintln!("Try to fit {} tetriminos in a {} sized map.", tetriminos_count, sandbox.size());
+    eprintln!("Try to fit {} tetriminos in a {} sized map.", tetriminos_count, pg.size());
+    while backtrack(&tetriminos, 0, &mut pg, &mut solution) == NeedNewMap {
+        pg = Playground::from_size(pg.size() + 1);
+        eprintln!("Try to fit {} tetriminos in a {} sized map.", tetriminos_count, pg.size());
     }
 
     let solution = raw_tetriminos.iter().copied().zip(solution.iter().rev().copied()).collect();
-    VisualMap::new(solution, sandbox.size())
+    VisualMap::new(solution, pg.size())
 }
 
 #[derive(Debug, Default, Clone, Copy)]

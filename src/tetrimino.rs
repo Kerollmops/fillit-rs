@@ -3,7 +3,7 @@ use std::str;
 use anyhow::{anyhow, ensure, Context};
 use enum_ordinalize::Ordinalize;
 
-use crate::Position;
+use crate::{Position, Piece};
 use Tetrimino::*;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Ordinalize)]
@@ -318,22 +318,5 @@ impl Tetrimino {
             PodiumRotate180 => Position { col: 3, row: 2 },
             PodiumRotate270 => Position { col: 2, row: 3 },
         }
-    }
-}
-
-#[derive(Copy, Clone)]
-pub union Piece {
-    pub parts: [u16; 4],
-    pub full: u64,
-}
-
-impl Piece {
-    pub fn uninit() -> Piece {
-        Piece { full: 0 }
-    }
-
-    #[inline]
-    pub fn shift_right(&mut self, shift: usize) {
-        unsafe { self.full >>= shift }
     }
 }
