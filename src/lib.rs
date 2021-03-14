@@ -28,7 +28,7 @@ struct Sandbox {
 }
 
 impl Sandbox {
-    pub fn new(count: usize) -> Option<Sandbox> {
+    pub fn from_number_tetriminos(count: usize) -> Option<Sandbox> {
         fn minimum_sandbox(nb_tetriminos: usize) -> Option<usize> {
             let sqrt_n_x_4 = [0, 2, 3, 4, 4, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 8,
                               9, 9, 9, 9, 10, 10, 10, 10, 10, 11];
@@ -170,7 +170,7 @@ fn backtrack(
 
 pub fn find_best_fit(raw_tetriminos: &[Tetrimino]) -> Option<VisualMap> {
     let mut solution = Vec::with_capacity(raw_tetriminos.len());
-    let mut sandbox = Sandbox::new(raw_tetriminos.len())?;
+    let mut sandbox = Sandbox::from_number_tetriminos(raw_tetriminos.len())?;
     let tetriminos = Tetriminos::from_tetriminos(raw_tetriminos);
 
     while backtrack(&tetriminos, 0, &mut sandbox, &mut solution) == NeedNewMap {
