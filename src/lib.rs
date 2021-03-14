@@ -82,7 +82,12 @@ fn xor_piece(mut piece: Piece, pos: &Position, pg: &mut Playground) {
     }
 }
 
-fn backtrack(tets: &Tetriminos, i: usize, pg: &mut Playground, solution: &mut Vec<Position>) -> BacktrackResult {
+fn backtrack(tets: &Tetriminos, i: usize, pg: &mut Playground, solution: &mut [Position]) -> BacktrackResult {
+    let (solution, tail_solution) = match solution.split_first_mut() {
+        Some((first, tail)) => (first, tail),
+        None => return BacktrackResult::NeedNewMap,
+    };
+
     let ttype = tets.types[i];
     let tsize = tets.sizes[i];
     let tpiece = tets.pieces[i];
@@ -104,8 +109,8 @@ fn backtrack(tets: &Tetriminos, i: usize, pg: &mut Playground, solution: &mut Ve
                     col: pos.col + tets.jump_columns[i],
                 };
 
-                if i + 1 == tets.count || backtrack(tets, i + 1, pg, solution) == SolutionFound {
-                    solution.push(pos);
+                if i + 1 == tets.count || backtrack(tets, i + 1, pg, tail_solution) == SolutionFound {
+                    *solution = pos;
                     return SolutionFound;
                 }
                 xor_piece(tpiece, &pos, pg);
@@ -125,7 +130,7 @@ fn backtrack(tets: &Tetriminos, i: usize, pg: &mut Playground, solution: &mut Ve
 
 pub fn find_best_fit(raw_tetriminos: &[Tetrimino]) -> VisualMap {
     let tetriminos_count = raw_tetriminos.len();
-    let mut solution = Vec::with_capacity(tetriminos_count);
+    let mut solution = [Position::default(); 26];
     let mut pg = Playground::from_number_tetriminos(tetriminos_count);
     let tetriminos = Tetriminos::from_tetriminos(raw_tetriminos);
 
@@ -135,7 +140,7 @@ pub fn find_best_fit(raw_tetriminos: &[Tetrimino]) -> VisualMap {
         eprintln!("Try to fit {} tetriminos in a {} sized map.", tetriminos_count, pg.size());
     }
 
-    let solution = raw_tetriminos.iter().copied().zip(solution.iter().rev().copied()).collect();
+    let solution = raw_tetriminos.iter().copied().zip(solution.iter().copied()).collect();
     VisualMap::new(solution, pg.size())
 }
 
