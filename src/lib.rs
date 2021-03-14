@@ -129,26 +129,28 @@ fn xor_piece(mut piece: Piece, pos: &Position, sandbox: &mut Sandbox) {
     }
 }
 
-fn backtrack(
-    tetriminos: &Tetriminos,
-    i: usize,
-    sandbox: &mut Sandbox,
-    solution: &mut Vec<Position>,
-) -> BacktrackResult
-{
-    let ttype = tetriminos.types[i];
-    let tsize = tetriminos.sizes[i];
-    let tpiece = tetriminos.pieces[i];
+fn backtrack(tets: &Tetriminos, i: usize, sandbox: &mut Sandbox, solution: &mut Vec<Position>) -> BacktrackResult {
+    let ttype = tets.types[i];
+    let tsize = tets.sizes[i];
+    let tpiece = tets.pieces[i];
     let saved_farthest = sandbox.far[ttype];
+
+    // We use the previously found fartest position for this tetriminos type
+    // to start searching for the next position.
     let mut pos = sandbox.far[ttype];
 
     while sandbox.size.checked_sub(tsize.row).map_or(false, |s| pos.row <= s) {
         while sandbox.size.checked_sub(tsize.col).map_or(false, |s| pos.col <= s) {
             if can_write_tetriminos(tpiece, &pos, sandbox) {
                 xor_piece(tpiece, &pos, sandbox);
-                sandbox.far[ttype].row = pos.row;
-                sandbox.far[ttype].col = pos.col + tetriminos.jump_columns[i];
-                if i + 1 == tetriminos.count || backtrack(tetriminos, i + 1, sandbox, solution) == SolutionFound {
+
+                // We saved the farthest position found for this tetrimino type.
+                sandbox.far[ttype] = Position {
+                    row: pos.row,
+                    col: pos.col + tets.jump_columns[i],
+                };
+
+                if i + 1 == tets.count || backtrack(tets, i + 1, sandbox, solution) == SolutionFound {
                     solution.push(pos);
                     return SolutionFound;
                 }
@@ -159,6 +161,9 @@ fn backtrack(
         pos.row += 1;
         pos.col = 0;
     }
+
+    // We write back the previously found fartest position for this tetrimino type,
+    // as we were not able to find a solution with our best position.
     sandbox.far[ttype] = saved_farthest;
 
     if i == 0 { NeedNewMap } else { Continue }
