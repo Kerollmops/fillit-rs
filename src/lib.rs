@@ -28,35 +28,31 @@ struct Sandbox {
 }
 
 impl Sandbox {
-    pub fn from_number_tetriminos(count: usize) -> Option<Sandbox> {
-        fn minimum_sandbox(nb_tetriminos: usize) -> Option<usize> {
+    pub fn from_number_tetriminos(count: usize) -> Sandbox {
+        fn minimum_sandbox(nb_tetriminos: usize) -> usize {
             let sqrt_n_x_4 = [0, 2, 3, 4, 4, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 8,
                               9, 9, 9, 9, 10, 10, 10, 10, 10, 11];
-            sqrt_n_x_4.get(nb_tetriminos).copied()
+            sqrt_n_x_4.get(nb_tetriminos).copied().unwrap_or(11)
         }
+
+        let size = minimum_sandbox(count);
+        Sandbox::from_size(size)
+    }
+
+    pub fn from_size(size: usize) -> Sandbox {
+        assert!(size <= 16 * 16);
 
         let mut sandbox = Sandbox {
             far: Default::default(),
             buff: [u16::max_value(); 16],
-            size: minimum_sandbox(count)?,
+            size,
         };
         sandbox.generate_fences();
-        Some(sandbox)
+        sandbox
     }
 
     pub fn size(&self) -> usize {
         self.size
-    }
-
-    pub fn increase_size(&mut self) -> bool {
-        if self.size <= 21 { // TODO ????
-            self.size += 1;
-            self.far.fill(Position::new(0, 0));
-            self.generate_fences();
-            true
-        } else {
-            false
-        }
     }
 
     fn generate_fences(&mut self) {
@@ -168,20 +164,20 @@ fn backtrack(
     if i == 0 { NeedNewMap } else { Continue }
 }
 
-pub fn find_best_fit(raw_tetriminos: &[Tetrimino]) -> Option<VisualMap> {
-    let mut solution = Vec::with_capacity(raw_tetriminos.len());
-    let mut sandbox = Sandbox::from_number_tetriminos(raw_tetriminos.len())?;
+pub fn find_best_fit(raw_tetriminos: &[Tetrimino]) -> VisualMap {
+    let tetriminos_count = raw_tetriminos.len();
+    let mut solution = Vec::with_capacity(tetriminos_count);
+    let mut sandbox = Sandbox::from_number_tetriminos(tetriminos_count);
     let tetriminos = Tetriminos::from_tetriminos(raw_tetriminos);
 
+    eprintln!("Try to fit {} tetriminos in a {} sized map.", tetriminos_count, sandbox.size());
     while backtrack(&tetriminos, 0, &mut sandbox, &mut solution) == NeedNewMap {
-        // eprintln!("increase sandbox size to {}", sandbox.size() + 1);
-        if !sandbox.increase_size() {
-            return None;
-        }
+        sandbox = Sandbox::from_size(sandbox.size() + 1);
+        eprintln!("Try to fit {} tetriminos in a {} sized map.", tetriminos_count, sandbox.size());
     }
 
     let solution = raw_tetriminos.iter().copied().zip(solution.iter().rev().copied()).collect();
-    Some(VisualMap::new(solution, sandbox.size()))
+    VisualMap::new(solution, sandbox.size())
 }
 
 #[derive(Debug, Default, Clone, Copy)]

@@ -7,11 +7,9 @@ fn main() -> anyhow::Result<()> {
     io::stdin().read_to_string(&mut buffer)?;
 
     let tetriminos = parse_tetriminos(&buffer)?;
+    let map = find_best_fit(&tetriminos);
 
-    match find_best_fit(&tetriminos) {
-        Some(map) => print!("{}", map),
-        None => eprintln!("Cannot construct a valid map"),
-    }
+    print!("{}", map);
 
     Ok(())
 }
