@@ -139,8 +139,9 @@ fn backtrack(tets: &Tetriminos, i: usize, sandbox: &mut Sandbox, solution: &mut 
     // to start searching for the next position.
     let mut pos = sandbox.far[ttype];
 
-    while sandbox.size.checked_sub(tsize.row).map_or(false, |s| pos.row <= s) {
-        while sandbox.size.checked_sub(tsize.col).map_or(false, |s| pos.col <= s) {
+    // It is safe to do a wrapping_sub as it is not possible to wrap.
+    while pos.row <= sandbox.size.wrapping_sub(tsize.row) {
+        while pos.col <= sandbox.size.wrapping_sub(tsize.col) {
             if can_write_tetriminos(tpiece, &pos, sandbox) {
                 xor_piece(tpiece, &pos, sandbox);
 
