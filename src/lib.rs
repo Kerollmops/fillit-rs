@@ -62,7 +62,7 @@ enum BacktrackResult {
     Continue,
 }
 
-fn can_write_tetriminos(mut piece: Piece, pos: &Position, pg: &Playground) -> bool {
+fn can_write_piece(mut piece: Piece, pos: &Position, pg: &Playground) -> bool {
     piece.shift_right(pos.col);
     unsafe {
            (piece.parts[0] & pg.buff[pos.row + 0]) == 0
@@ -97,10 +97,9 @@ fn backtrack(tets: &Tetriminos, i: usize, pg: &mut Playground, solution: &mut [P
     // to start searching for the next position.
     let mut pos = pg.far[ttype];
 
-    // It is safe to do a wrapping_sub as it is not possible to wrap.
-    while pos.row <= pg.size.wrapping_sub(tsize.row) {
-        while pos.col <= pg.size.wrapping_sub(tsize.col) {
-            if can_write_tetriminos(tpiece, &pos, pg) {
+    while pg.size.checked_sub(tsize.row).map_or(false, |s| pos.row <= s) {
+        while pg.size.checked_sub(tsize.col).map_or(false, |s| pos.col <= s) {
+            if can_write_piece(tpiece, &pos, pg) {
                 xor_piece(tpiece, &pos, pg);
 
                 // We saved the farthest position found for this tetrimino type.
@@ -135,7 +134,7 @@ pub fn find_best_fit(raw_tetriminos: &[Tetrimino]) -> VisualMap {
     let tetriminos = Tetriminos::from_tetriminos(raw_tetriminos);
 
     eprintln!("Try to fit {} tetriminos in a {} sized map.", tetriminos_count, pg.size());
-    while backtrack(&tetriminos, 0, &mut pg, &mut solution) == NeedNewMap {
+    while backtrack(&tetriminos, 0, &mut pg, &mut solution[..tetriminos_count]) == NeedNewMap {
         pg = Playground::from_size(pg.size() + 1);
         eprintln!("Try to fit {} tetriminos in a {} sized map.", tetriminos_count, pg.size());
     }

@@ -2,6 +2,7 @@ use std::fmt;
 
 use crate::{Position, Tetrimino};
 
+#[derive(Clone)]
 pub struct Playground {
     /// The farthest position for a given piece type.
     pub far: [Position; Tetrimino::variant_count()],
