@@ -3,6 +3,7 @@ use std::str;
 use anyhow::{anyhow, ensure, Context};
 use enum_ordinalize::Ordinalize;
 
+use crate::boolean_maps::*;
 use crate::{Position, Piece};
 use Tetrimino::*;
 
@@ -195,7 +196,6 @@ impl Tetrimino {
     }
 
     fn from_buffer_4x4(buffer: [[bool; 4]; 4]) -> Option<Tetrimino> {
-        use crate::boolean_maps::*;
         match buffer {
             VERTICAL_BAR => Some(VerticalBar),
             HORIZONTAL_BAR => Some(HorizontalBar),
@@ -221,7 +221,6 @@ impl Tetrimino {
     }
 
     pub const fn boolean_map(&self) -> [[bool; 4]; 4] {
-        use crate::boolean_maps::*;
         match self {
             VerticalBar => VERTICAL_BAR,
             HorizontalBar => HORIZONTAL_BAR,
@@ -246,28 +245,20 @@ impl Tetrimino {
     }
 
     pub const fn piece(&self) -> Piece {
-        use crate::pieces::*;
-        match self {
-            VerticalBar => VERTICAL_BAR,
-            HorizontalBar => HORIZONTAL_BAR,
-            Square => SQUARE,
-            NormalL => NORMAL_L,
-            NormalLRotate90 => NORMAL_L_ROTATE90,
-            NormalLRotate180 => NORMAL_L_ROTATE180,
-            NormalLRotate270 => NORMAL_L_ROTATE270,
-            MirrorL => MIRROR_L,
-            MirrorLRotate90 => MIRROR_L_ROTATE90,
-            MirrorLRotate180 => MIRROR_L_ROTATE180,
-            MirrorLRotate270 => MIRROR_L_ROTATE270,
-            NormalStairs => NORMAL_STAIRS,
-            NormalStairsRotate90 => NORMAL_STAIRS_ROTATE90,
-            MirrorStairs => MIRROR_STAIRS,
-            MirrorStairsRotate90 => MIRROR_STAIRS_ROTATE90,
-            Podium => PODIUM,
-            PodiumRotate90 => PODIUM_ROTATE90,
-            PodiumRotate180 => PODIUM_ROTATE180,
-            PodiumRotate270 => PODIUM_ROTATE270,
+        const fn create_part(bs: [bool; 4]) -> u16 {
+              (bs[0] as u16) << 15
+            | (bs[1] as u16) << 14
+            | (bs[2] as u16) << 13
+            | (bs[3] as u16) << 12
         }
+
+        let booleans = self.boolean_map();
+        let mut parts = [0; 4];
+        parts[0] = create_part(booleans[0]);
+        parts[1] = create_part(booleans[1]);
+        parts[2] = create_part(booleans[2]);
+        parts[3] = create_part(booleans[3]);
+        Piece { parts }
     }
 
     /// Defines the amount of columns that we can skip based on

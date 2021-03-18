@@ -5,7 +5,6 @@ use anyhow::{ensure, Context};
 
 mod boolean_maps;
 mod piece;
-mod pieces;
 mod playground;
 mod tetrimino;
 
