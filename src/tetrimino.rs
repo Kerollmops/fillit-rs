@@ -164,6 +164,8 @@ pub enum Tetrimino {
 }
 
 impl Tetrimino {
+    pub const TILE_COUNT: usize = 4;
+
     pub fn from_text(text: &str, empty: char, full: char) -> anyhow::Result<Tetrimino> {
         let mut buffer = [[false; 4]; 4];
         let mut last_y = 0;

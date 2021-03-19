@@ -11,9 +11,7 @@ pub struct Playground {
 }
 
 fn minimum_sandbox(nb_tetriminos: usize) -> usize {
-    let sqrt_n_x_4 = [0, 2, 3, 4, 4, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 8,
-                      9, 9, 9, 9, 10, 10, 10, 10, 10, 11];
-    sqrt_n_x_4.get(nb_tetriminos).copied().unwrap_or(11)
+    (nb_tetriminos as f64 * Tetrimino::TILE_COUNT as f64).sqrt().ceil() as usize
 }
 
 impl Playground {
@@ -23,7 +21,7 @@ impl Playground {
     }
 
     pub fn from_size(size: usize) -> Playground {
-        assert!(size <= 16 * 16);
+        assert!(size <= 16);
 
         let mut sandbox = Playground {
             far: Default::default(),
