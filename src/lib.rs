@@ -29,6 +29,8 @@ struct Tetriminos {
     jump_columns: [usize; 26],
     sizes: [Position; 26],
     pieces: [Piece; 26],
+    is_first_occurence: [bool; 26],
+    is_last_piece_type: [bool; 26],
     count: usize,
 }
 
@@ -38,17 +40,31 @@ impl Tetriminos {
         let mut sizes = [Position::default(); 26];
         let mut types = [0; 26];
         let mut jump_columns = [0; 26];
+        let mut is_first_occurence = [false; 26];
+        let mut is_last_piece_type = [false; 26];
 
         pieces.iter_mut().zip(tetriminos).for_each(|(p, tet)| *p = tet.piece());
         types.iter_mut().zip(tetriminos).for_each(|(t, tet)| *t = tet.ordinal());
         sizes.iter_mut().zip(tetriminos).for_each(|(s, tet)| *s = tet.size());
         jump_columns.iter_mut().zip(tetriminos).for_each(|(j, tet)| *j = tet.jump_columns());
 
+        // Store a boolean that tell for each piece if it's the last occurence of this type.
+        is_first_occurence.iter_mut().zip(&types).enumerate().for_each(|(i, (ifo, t))| {
+            *ifo = !types[..i].iter().any(|ot| ot == t);
+        });
+
+        // Find the last tetriminos type of the list.
+        if let Some(idx) = is_first_occurence.iter().rposition(|x| *x) {
+            is_last_piece_type[idx] = true;
+        }
+
         Tetriminos {
             types,
             jump_columns,
             sizes,
             pieces,
+            is_first_occurence,
+            is_last_piece_type,
             count: tetriminos.len(),
         }
     }
@@ -81,36 +97,59 @@ fn xor_piece(mut piece: Piece, pos: &Position, pg: &mut Playground) {
     }
 }
 
-fn backtrack(tets: &Tetriminos, i: usize, pg: &mut Playground, solution: &mut [Position]) -> BacktrackResult {
+fn backtrack(
+    tetriminos: &Tetriminos,
+    i: usize,
+    pg: &mut Playground,
+    wastable: usize,
+    solution: &mut [Position],
+) -> BacktrackResult
+{
     let (solution, tail_solution) = match solution.split_first_mut() {
         Some((first, tail)) => (first, tail),
         None => return BacktrackResult::NeedNewMap,
     };
 
-    let ttype = tets.types[i];
-    let tsize = tets.sizes[i];
-    let tpiece = tets.pieces[i];
+    let ttype = tetriminos.types[i];
+    let tsize = tetriminos.sizes[i];
+    let tpiece = tetriminos.pieces[i];
+    let is_last_piece_type = tetriminos.is_last_piece_type[i];
     let saved_farthest = pg.far[ttype];
 
-    // We use the previously found fartest position for this tetriminos type
+    // We use the previously found farthest position for this tetriminos type
     // to start searching for the next position.
     let mut pos = pg.far[ttype];
 
     while pg.size.checked_sub(tsize.row).map_or(false, |s| pos.row <= s) {
         while pg.size.checked_sub(tsize.col).map_or(false, |s| pos.col <= s) {
+            // If we waste too much tiles it means that this map is not more solvable.
+            if i <= 9 && is_last_piece_type && wasted(tetriminos, pg) > wastable {
+                return NeedNewMap;
+            }
+
             if can_write_piece(tpiece, &pos, pg) {
                 xor_piece(tpiece, &pos, pg);
 
                 // We saved the farthest position found for this tetrimino type.
                 pg.far[ttype] = Position {
                     row: pos.row,
-                    col: pos.col + tets.jump_columns[i],
+                    col: pos.col + tetriminos.jump_columns[i],
                 };
 
-                if i + 1 == tets.count || backtrack(tets, i + 1, pg, tail_solution) == SolutionFound {
+                if i + 1 == tetriminos.count {
                     *solution = pos;
                     return SolutionFound;
                 }
+
+                match backtrack(tetriminos, i + 1, pg, wastable, tail_solution) {
+                    NeedNewMap => return NeedNewMap,
+                    SolutionFound => {
+                        *solution = pos;
+                        return SolutionFound;
+                    },
+                    Continue => (),
+                }
+
                 xor_piece(tpiece, &pos, pg);
             }
             pos.col += 1;
@@ -126,15 +165,31 @@ fn backtrack(tets: &Tetriminos, i: usize, pg: &mut Playground, solution: &mut [P
     if i == 0 { NeedNewMap } else { Continue }
 }
 
+fn wasted(tetriminos: &Tetriminos, pg: &Playground) -> usize {
+    let pos = pg.far.iter().zip(&tetriminos.is_first_occurence)
+        .take(tetriminos.count)
+        .filter_map(|(far, ifo)| ifo.then(|| *far))
+        .min()
+        .unwrap_or_else(Position::default);
+
+    pos.row.saturating_sub(1) * pg.size() + pos.col
+}
+
+fn compute_wastable(pg: &Playground, tetriminos_count: usize) -> usize {
+    pg.size() * pg.size() - tetriminos_count * Tetrimino::TILE_COUNT
+}
+
 pub fn find_best_fit(raw_tetriminos: &[Tetrimino]) -> VisualMap {
     let tetriminos_count = raw_tetriminos.len();
     let mut solution = [Position::default(); 26];
     let mut pg = Playground::from_number_tetriminos(tetriminos_count);
+    let mut wastable = compute_wastable(&pg, tetriminos_count);
     let tetriminos = Tetriminos::from_tetriminos(raw_tetriminos);
 
     eprintln!("Try to fit {} tetriminos in a {} sized map.", tetriminos_count, pg.size());
-    while backtrack(&tetriminos, 0, &mut pg, &mut solution[..tetriminos_count]) == NeedNewMap {
+    while backtrack(&tetriminos, 0, &mut pg, wastable, &mut solution[..tetriminos_count]) == NeedNewMap {
         pg = Playground::from_size(pg.size() + 1);
+        wastable = compute_wastable(&pg, tetriminos_count);
         eprintln!("Try to fit {} tetriminos in a {} sized map.", tetriminos_count, pg.size());
     }
 
@@ -142,7 +197,7 @@ pub fn find_best_fit(raw_tetriminos: &[Tetrimino]) -> VisualMap {
     VisualMap::new(solution, pg.size())
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Position {
     pub col: usize,
     pub row: usize,
