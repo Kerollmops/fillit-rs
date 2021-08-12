@@ -74,7 +74,6 @@ impl Tetriminos {
 enum BacktrackResult {
     SolutionFound,
     NeedNewMap,
-    Continue,
 }
 
 fn can_write_piece(mut piece: Piece, pos: &Position, pg: &Playground) -> bool {
@@ -99,70 +98,78 @@ fn xor_piece(mut piece: Piece, pos: &Position, pg: &mut Playground) {
 
 fn backtrack(
     tetriminos: &Tetriminos,
-    i: usize,
     pg: &mut Playground,
     wastable: usize,
-    solution: &mut [Position],
+    positions: &mut [Position],
 ) -> BacktrackResult
 {
-    let (solution, tail_solution) = match solution.split_first_mut() {
-        Some((first, tail)) => (first, tail),
-        None => return BacktrackResult::NeedNewMap,
-    };
+    let mut i = 0;
+    let mut saved_farthests = [Position::default(); 26];
 
-    let ttype = tetriminos.types[i];
-    let tsize = tetriminos.sizes[i];
-    let tpiece = tetriminos.pieces[i];
-    let is_last_piece_type = tetriminos.is_last_piece_type[i];
-    let saved_farthest = pg.far[ttype];
+    positions.fill_with(Position::default);
 
-    // We use the previously found farthest position for this tetriminos type
-    // to start searching for the next position.
-    let mut pos = pg.far[ttype];
+    'root: loop {
+        let pos = &mut positions[i];
+        let saved_farthest = &mut saved_farthests[i];
+        let is_last_piece_type = tetriminos.is_last_piece_type[i];
+        let tsize = tetriminos.sizes[i];
+        let tpiece = tetriminos.pieces[i];
+        let ttype = tetriminos.types[i];
 
-    while pg.size.checked_sub(tsize.row).map_or(false, |s| pos.row <= s) {
-        while pg.size.checked_sub(tsize.col).map_or(false, |s| pos.col <= s) {
-            // If we waste too much tiles it means that this map is not more solvable.
-            if i <= 9 && is_last_piece_type && wasted(tetriminos, pg) > wastable {
-                return NeedNewMap;
-            }
+        // Loop on the columns and rows and ensure that we do not try to write
+        // the tetrimino out-of-bounds.
+        while pg.size.checked_sub(tsize.row).map_or(false, |s| pos.row <= s) {
+            while pg.size.checked_sub(tsize.col).map_or(false, |s| pos.col <= s) {
 
-            if can_write_piece(tpiece, &pos, pg) {
-                xor_piece(tpiece, &pos, pg);
-
-                // We saved the farthest position found for this tetrimino type.
-                pg.far[ttype] = Position {
-                    row: pos.row,
-                    col: pos.col + tetriminos.jump_columns[i],
-                };
-
-                if i + 1 == tetriminos.count {
-                    *solution = pos;
-                    return SolutionFound;
+                // If we waste too much tiles it means that this map is no more solvable.
+                if i <= 9 && is_last_piece_type && wasted(tetriminos, pg) > wastable {
+                    return NeedNewMap;
                 }
 
-                match backtrack(tetriminos, i + 1, pg, wastable, tail_solution) {
-                    NeedNewMap => return NeedNewMap,
-                    SolutionFound => {
-                        *solution = pos;
+                // Check that this position can be used by the current tetrimino and
+                // if it is write it there.
+                if can_write_piece(tpiece, pos, pg) {
+                    xor_piece(tpiece, pos, pg);
+
+                    *saved_farthest = pg.far[ttype];
+                    pg.far[ttype] = Position {
+                        row: pos.row,
+                        col: pos.col + tetriminos.jump_columns[i],
+                    };
+
+                    // At this point we successfully wrote the tetrimino `i` at position `pos`.
+                    if i + 1 == tetriminos.count {
                         return SolutionFound;
-                    },
-                    Continue => (),
+                    } else {
+                        // We go to the next tetriminos by incrementing `i` and jumping to the top
+                        // of the loop where we start searching for the right place to put it.
+                        positions[i + 1] = pg.far[tetriminos.types[i + 1]];
+                        i += 1;
+                        continue 'root;
+                    }
                 }
-
-                xor_piece(tpiece, &pos, pg);
+                pos.col += 1;
             }
-            pos.col += 1;
+            pos.row += 1;
+            pos.col = 0;
         }
-        pos.row += 1;
-        pos.col = 0;
+
+        // At this point we were not able to put the tetrimino `i` on this map.
+        if i == 0 {
+            return NeedNewMap;
+        } else {
+            *pos = Position::default();
+
+            let ppos = &mut positions[i - 1];
+            let ptpiece = tetriminos.pieces[i - 1];
+            let pttype = tetriminos.types[i - 1];
+            xor_piece(ptpiece, ppos, pg);
+            pg.far[pttype] = saved_farthests[i - 1];
+
+            ppos.col += 1;
+            i -= 1;
+        }
     }
-
-    // We write back the previously found fartest position for this tetrimino type,
-    // as we were not able to find a solution with our best position.
-    pg.far[ttype] = saved_farthest;
-
-    if i == 0 { NeedNewMap } else { Continue }
 }
 
 fn wasted(tetriminos: &Tetriminos, pg: &Playground) -> usize {
@@ -187,7 +194,7 @@ pub fn find_best_fit(raw_tetriminos: &[Tetrimino]) -> VisualMap {
     let tetriminos = Tetriminos::from_tetriminos(raw_tetriminos);
 
     eprintln!("Try to fit {} tetriminos in a {} sized map.", tetriminos_count, pg.size());
-    while backtrack(&tetriminos, 0, &mut pg, wastable, &mut solution[..tetriminos_count]) == NeedNewMap {
+    while backtrack(&tetriminos, &mut pg, wastable, &mut solution[..tetriminos_count]) == NeedNewMap {
         pg = Playground::from_size(pg.size() + 1);
         wastable = compute_wastable(&pg, tetriminos_count);
         eprintln!("Try to fit {} tetriminos in a {} sized map.", tetriminos_count, pg.size());
