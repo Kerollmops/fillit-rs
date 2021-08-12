@@ -8,7 +8,6 @@ fn main() -> anyhow::Result<()> {
 
     let tetriminos = parse_tetriminos(&buffer)?;
     let map = find_best_fit(&tetriminos);
-
     print!("{}", map);
 
     Ok(())
