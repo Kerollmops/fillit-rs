@@ -4,6 +4,7 @@ mod boolean_maps;
 mod piece;
 mod playground;
 mod tetrimino;
+mod tetriminos;
 mod visual_map;
 mod position;
 
@@ -12,6 +13,7 @@ pub use self::playground::Playground;
 pub use self::tetrimino::Tetrimino;
 pub use self::visual_map::VisualMap;
 pub use self::position::Position;
+pub use self::tetriminos::Tetriminos;
 
 const NUMBER_TETRIMINOS: usize = 26;
 
@@ -25,52 +27,6 @@ pub fn parse_tetriminos(text: &str) -> anyhow::Result<Vec<Tetrimino>> {
     let tetriminos = tetriminos?;
     ensure!(tetriminos.len() <= NUMBER_TETRIMINOS, "too much tetriminos (max is {})", NUMBER_TETRIMINOS);
     Ok(tetriminos)
-}
-
-struct Tetriminos {
-    types: [usize; NUMBER_TETRIMINOS],
-    jump_columns: [usize; NUMBER_TETRIMINOS],
-    sizes: [Position; NUMBER_TETRIMINOS],
-    pieces: [Piece; NUMBER_TETRIMINOS],
-    is_first_occurence: [bool; NUMBER_TETRIMINOS],
-    is_last_piece_type: [bool; NUMBER_TETRIMINOS],
-    count: usize,
-}
-
-impl Tetriminos {
-    fn from_tetriminos(tetriminos: &[Tetrimino]) -> Tetriminos {
-        let mut pieces = [Piece::uninit(); NUMBER_TETRIMINOS];
-        let mut sizes = [Position::default(); NUMBER_TETRIMINOS];
-        let mut types = [0; NUMBER_TETRIMINOS];
-        let mut jump_columns = [0; NUMBER_TETRIMINOS];
-        let mut is_first_occurence = [false; NUMBER_TETRIMINOS];
-        let mut is_last_piece_type = [false; NUMBER_TETRIMINOS];
-
-        pieces.iter_mut().zip(tetriminos).for_each(|(p, tet)| *p = tet.piece());
-        types.iter_mut().zip(tetriminos).for_each(|(t, tet)| *t = tet.ordinal());
-        sizes.iter_mut().zip(tetriminos).for_each(|(s, tet)| *s = tet.size());
-        jump_columns.iter_mut().zip(tetriminos).for_each(|(j, tet)| *j = tet.jump_columns());
-
-        // Store a boolean that tell for each piece if it's the last occurence of this type.
-        is_first_occurence.iter_mut().zip(&types).enumerate().for_each(|(i, (ifo, t))| {
-            *ifo = !types[..i].iter().any(|ot| ot == t);
-        });
-
-        // Find the last tetriminos type of the list.
-        if let Some(idx) = is_first_occurence.iter().rposition(|x| *x) {
-            is_last_piece_type[idx] = true;
-        }
-
-        Tetriminos {
-            types,
-            jump_columns,
-            sizes,
-            pieces,
-            is_first_occurence,
-            is_last_piece_type,
-            count: tetriminos.len(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
