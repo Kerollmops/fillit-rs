@@ -53,6 +53,27 @@ impl Playground {
         }
     }
 
+    /// Returns the wasted tiles of the first line.
+    ///
+    /// ```text
+    /// 0011001111001111
+    /// 1111000011101111
+    /// 1100000000000000
+    /// ```
+    ///
+    /// It is the line represented as bits where a 1 correspond to an empty tile
+    /// on the first line that have a full tile just below, on the second line.
+    ///
+    /// It also do not return a 1 (wasted tile) for empty tiles that could be
+    /// reached with `L` types tetriminos (with the helbow at the top).
+    #[inline(always)]
+    pub fn wasted_first_line_tiles(&self) -> u16 {
+        let first = self.buff[0];
+        let second = self.buff[1];
+        let map = second & !(!second << 1) & !(!second >> 1);
+        (first ^ map) & map
+    }
+
     fn generate_fences(&mut self) {
         self.buff.fill(u16::max_value());
         for line in self.buff.iter_mut().take(self.size) {

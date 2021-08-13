@@ -60,7 +60,6 @@ fn backtrack(
     let ttype = tetriminos.types[i];
     let tsize = tetriminos.sizes[i];
     let tpiece = tetriminos.pieces[i];
-    let is_last_piece_type = tetriminos.is_last_piece_type[i];
     let saved_farthest = farthest[ttype];
 
     // We use the previously found farthest position for this tetriminos type
@@ -69,9 +68,14 @@ fn backtrack(
 
     while pg.size().checked_sub(tsize.row).map_or(false, |s| pos.row <= s) {
         while pg.size().checked_sub(tsize.col).map_or(false, |s| pos.col <= s) {
-            // If we waste too much tiles it means that this map is not more solvable.
-            if i <= 9 && is_last_piece_type && wasted(tetriminos, pg.size(), farthest) > wastable {
-                return NeedNewMap;
+            // If we waste too much tiles it means that we can move to
+            // the next position for this tetrimino.
+            if wastable < 4 {
+                let wasted = pg.wasted_first_line_tiles().count_ones();
+                if wasted > 0 && wasted < 4 {
+                    pos.col += 1;
+                    continue;
+                }
             }
 
             if pg.can_write_piece(tpiece, &pos) {
@@ -112,18 +116,6 @@ fn backtrack(
     } else {
         Continue
     }
-}
-
-fn wasted(tetriminos: &Tetriminos, pg_size: usize, farthest: &[Position]) -> usize {
-    let pos = farthest
-        .iter()
-        .zip(&tetriminos.is_first_occurence)
-        .take(tetriminos.count)
-        .filter_map(|(far, ifo)| ifo.then(|| *far))
-        .min()
-        .unwrap_or_else(Position::default);
-
-    pos.row.saturating_sub(1) * pg_size + pos.col
 }
 
 fn compute_wastable(pg_size: usize, tetriminos_count: usize) -> usize {
