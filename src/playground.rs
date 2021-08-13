@@ -26,10 +26,12 @@ impl Playground {
         sandbox
     }
 
+    #[inline(always)]
     pub fn size(&self) -> usize {
         self.size
     }
 
+    #[inline(always)]
     pub fn can_write_piece(&self, mut piece: Piece, pos: &Position) -> bool {
         piece.shift_right(pos.col);
         unsafe {
@@ -40,6 +42,7 @@ impl Playground {
         }
     }
 
+    #[inline(always)]
     pub fn xor_piece(&mut self, mut piece: Piece, pos: &Position) {
         piece.shift_right(pos.col);
         unsafe {
