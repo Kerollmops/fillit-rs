@@ -1,6 +1,6 @@
 use std::io::{self, Read};
 
-use fillit::{parse_tetriminos, find_best_fit};
+use fillit::{find_best_fit, parse_tetriminos};
 
 fn main() -> anyhow::Result<()> {
     let mut buffer = String::new();

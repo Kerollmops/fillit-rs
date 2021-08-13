@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{Position, Tetrimino, Piece};
+use crate::{Piece, Position, Tetrimino};
 
 #[derive(Clone)]
 pub struct Playground {
@@ -21,10 +21,7 @@ impl Playground {
     pub fn from_size(size: usize) -> Playground {
         assert!(size <= 16);
 
-        let mut sandbox = Playground {
-            buff: [u16::max_value(); 16],
-            size,
-        };
+        let mut sandbox = Playground { buff: [u16::max_value(); 16], size };
         sandbox.generate_fences();
         sandbox
     }
@@ -36,10 +33,10 @@ impl Playground {
     pub fn can_write_piece(&self, mut piece: Piece, pos: &Position) -> bool {
         piece.shift_right(pos.col);
         unsafe {
-               (piece.parts[0] & self.buff[pos.row + 0]) == 0
-            && (piece.parts[1] & self.buff[pos.row + 1]) == 0
-            && (piece.parts[2] & self.buff[pos.row + 2]) == 0
-            && (piece.parts[3] & self.buff[pos.row + 3]) == 0
+            (piece.parts[0] & self.buff[pos.row + 0]) == 0
+                && (piece.parts[1] & self.buff[pos.row + 1]) == 0
+                && (piece.parts[2] & self.buff[pos.row + 2]) == 0
+                && (piece.parts[3] & self.buff[pos.row + 3]) == 0
         }
     }
 

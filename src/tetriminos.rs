@@ -1,4 +1,4 @@
-use crate::{NUMBER_TETRIMINOS, Tetrimino, Position, Piece};
+use crate::{Piece, Position, Tetrimino, NUMBER_TETRIMINOS};
 
 pub struct Tetriminos {
     pub types: [usize; NUMBER_TETRIMINOS],

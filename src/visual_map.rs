@@ -1,7 +1,7 @@
-use std::{fmt, str};
 use std::fmt::Write;
+use std::{fmt, str};
 
-use crate::{Tetrimino, Position};
+use crate::{Position, Tetrimino};
 
 pub struct VisualMap {
     tetriminos: Vec<(Tetrimino, Position)>,
@@ -22,7 +22,9 @@ impl fmt::Display for VisualMap {
             let tetrimino_map = t.boolean_map();
             for (line, tline) in map.chunks_mut(self.size).skip(p.row).zip(&tetrimino_map) {
                 for (tile, full) in line.iter_mut().skip(p.col).zip(tline) {
-                    if *full { *tile = c }
+                    if *full {
+                        *tile = c
+                    }
                 }
             }
         }

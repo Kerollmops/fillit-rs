@@ -2,10 +2,10 @@ use std::str;
 
 use anyhow::{anyhow, ensure, Context};
 use enum_ordinalize::Ordinalize;
+use Tetrimino::*;
 
 use crate::boolean_maps::*;
-use crate::{Position, Piece};
-use Tetrimino::*;
+use crate::{Piece, Position};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, Ordinalize)]
 #[repr(usize)]
@@ -192,7 +192,7 @@ impl Tetrimino {
                 buffer.rotate_left(y);
                 buffer.iter_mut().for_each(|b| b.rotate_left(x));
                 Tetrimino::from_buffer_4x4(buffer).context("invalid tetrimino")
-            },
+            }
             None => Err(anyhow!("empty tetrimino")),
         }
     }
@@ -248,10 +248,10 @@ impl Tetrimino {
 
     pub const fn piece(&self) -> Piece {
         const fn create_part(bs: [bool; 4]) -> u16 {
-              (bs[0] as u16) << 15
-            | (bs[1] as u16) << 14
-            | (bs[2] as u16) << 13
-            | (bs[3] as u16) << 12
+            (bs[0] as u16) << 15
+                | (bs[1] as u16) << 14
+                | (bs[2] as u16) << 13
+                | (bs[3] as u16) << 12
         }
 
         let booleans = self.boolean_map();
