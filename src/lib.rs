@@ -1,16 +1,17 @@
-use std::fmt::Write;
-use std::{fmt, str};
-
 use anyhow::{ensure, Context};
 
 mod boolean_maps;
 mod piece;
 mod playground;
 mod tetrimino;
+mod visual_map;
 
 pub use self::piece::Piece;
 pub use self::playground::Playground;
 pub use self::tetrimino::Tetrimino;
+pub use self::visual_map::VisualMap;
+
+const NUMBER_TETRIMINOS: usize = 26;
 
 use BacktrackResult::*;
 
@@ -20,28 +21,28 @@ pub fn parse_tetriminos(text: &str) -> anyhow::Result<Vec<Tetrimino>> {
     }).collect();
 
     let tetriminos = tetriminos?;
-    ensure!(tetriminos.len() <= 26, "too much tetriminos (max is 26)");
+    ensure!(tetriminos.len() <= NUMBER_TETRIMINOS, "too much tetriminos (max is {})", NUMBER_TETRIMINOS);
     Ok(tetriminos)
 }
 
 struct Tetriminos {
-    types: [usize; 26],
-    jump_columns: [usize; 26],
-    sizes: [Position; 26],
-    pieces: [Piece; 26],
-    is_first_occurence: [bool; 26],
-    is_last_piece_type: [bool; 26],
+    types: [usize; NUMBER_TETRIMINOS],
+    jump_columns: [usize; NUMBER_TETRIMINOS],
+    sizes: [Position; NUMBER_TETRIMINOS],
+    pieces: [Piece; NUMBER_TETRIMINOS],
+    is_first_occurence: [bool; NUMBER_TETRIMINOS],
+    is_last_piece_type: [bool; NUMBER_TETRIMINOS],
     count: usize,
 }
 
 impl Tetriminos {
     fn from_tetriminos(tetriminos: &[Tetrimino]) -> Tetriminos {
-        let mut pieces = [Piece::uninit(); 26];
-        let mut sizes = [Position::default(); 26];
-        let mut types = [0; 26];
-        let mut jump_columns = [0; 26];
-        let mut is_first_occurence = [false; 26];
-        let mut is_last_piece_type = [false; 26];
+        let mut pieces = [Piece::uninit(); NUMBER_TETRIMINOS];
+        let mut sizes = [Position::default(); NUMBER_TETRIMINOS];
+        let mut types = [0; NUMBER_TETRIMINOS];
+        let mut jump_columns = [0; NUMBER_TETRIMINOS];
+        let mut is_first_occurence = [false; NUMBER_TETRIMINOS];
+        let mut is_last_piece_type = [false; NUMBER_TETRIMINOS];
 
         pieces.iter_mut().zip(tetriminos).for_each(|(p, tet)| *p = tet.piece());
         types.iter_mut().zip(tetriminos).for_each(|(t, tet)| *t = tet.ordinal());
@@ -162,7 +163,7 @@ fn compute_wastable(pg_size: usize, tetriminos_count: usize) -> usize {
 
 pub fn find_best_fit(raw_tetriminos: &[Tetrimino]) -> VisualMap {
     let tetriminos_count = raw_tetriminos.len();
-    let mut solution = [Position::default(); 26];
+    let mut solution = [Position::default(); NUMBER_TETRIMINOS];
     let mut pg = Playground::from_number_tetriminos(tetriminos_count);
     // The farthest position for a given piece type.
     let mut farthest = [Position::default(); Tetrimino::variant_count()];
@@ -190,40 +191,6 @@ pub struct Position {
 impl Position {
     pub fn new(col: usize, row: usize) -> Position {
         Position { col, row }
-    }
-}
-
-pub struct VisualMap {
-    tetriminos: Vec<(Tetrimino, Position)>,
-    size: usize,
-}
-
-impl VisualMap {
-    pub fn new(tetriminos: Vec<(Tetrimino, Position)>, size: usize) -> VisualMap {
-        VisualMap { tetriminos, size }
-    }
-}
-
-impl fmt::Display for VisualMap {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut map = vec![b'.'; self.size * self.size];
-
-        for ((t, p), c) in self.tetriminos.iter().zip(b'A'..) {
-            let tetrimino_map = t.boolean_map();
-            for (line, tline) in map.chunks_mut(self.size).skip(p.row).zip(&tetrimino_map) {
-                for (tile, full) in line.iter_mut().skip(p.col).zip(tline) {
-                    if *full { *tile = c }
-                }
-            }
-        }
-
-        for line in map.chunks(self.size) {
-            let line = str::from_utf8(line).unwrap();
-            f.write_str(line)?;
-            f.write_char('\n')?;
-        }
-
-        Ok(())
     }
 }
 
