@@ -252,6 +252,7 @@ mod tests {
         NOT_VALID_X,
     ];
 
+    const VALID_0: &str =               include_str!("../tests/valid_0.fillit");
     const VALID_1: &str =               include_str!("../tests/valid_1.fillit");
     const VALID_2: &str =               include_str!("../tests/valid_2.fillit");
     const VALID_3: &str =               include_str!("../tests/valid_3.fillit");
@@ -277,6 +278,7 @@ mod tests {
     const VALID_I_25: &str =            include_str!("../tests/valid_I_25.fillit");
     const VALID_I_26: &str =            include_str!("../tests/valid_I_26.fillit");
     const VALIDS: &[&str] = &[
+        VALID_0,
         VALID_1,
         VALID_2,
         VALID_3,
@@ -303,6 +305,7 @@ mod tests {
         VALID_I_26,
     ];
 
+    const ANSWER_0: &str =               include_str!("../tests/answers/valid_0.answer");
     const ANSWER_1: &str =               include_str!("../tests/answers/valid_1.answer");
     const ANSWER_2: &str =               include_str!("../tests/answers/valid_2.answer");
     const ANSWER_3: &str =               include_str!("../tests/answers/valid_3.answer");
@@ -328,6 +331,7 @@ mod tests {
     const ANSWER_I_26: &str =            include_str!("../tests/answers/valid_I_26.answer");
 
     const EASY_MAPS_ANSWERS: &[(&str, &str)] = &[
+        (VALID_0, ANSWER_0),
         (VALID_1, ANSWER_1),
         (VALID_2, ANSWER_2),
         (VALID_3, ANSWER_3),
