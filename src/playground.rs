@@ -1,13 +1,11 @@
 use std::fmt;
 
-use crate::{Position, Tetrimino};
+use crate::{Position, Tetrimino, Piece};
 
 #[derive(Clone)]
 pub struct Playground {
-    /// The farthest position for a given piece type.
-    pub far: [Position; Tetrimino::variant_count()],
-    pub buff: [u16; 16],
-    pub size: usize,
+    buff: [u16; 16],
+    size: usize,
 }
 
 fn minimum_sandbox(nb_tetriminos: usize) -> usize {
@@ -24,7 +22,6 @@ impl Playground {
         assert!(size <= 16);
 
         let mut sandbox = Playground {
-            far: Default::default(),
             buff: [u16::max_value(); 16],
             size,
         };
@@ -34,6 +31,26 @@ impl Playground {
 
     pub fn size(&self) -> usize {
         self.size
+    }
+
+    pub fn can_write_piece(&self, mut piece: Piece, pos: &Position) -> bool {
+        piece.shift_right(pos.col);
+        unsafe {
+               (piece.parts[0] & self.buff[pos.row + 0]) == 0
+            && (piece.parts[1] & self.buff[pos.row + 1]) == 0
+            && (piece.parts[2] & self.buff[pos.row + 2]) == 0
+            && (piece.parts[3] & self.buff[pos.row + 3]) == 0
+        }
+    }
+
+    pub fn xor_piece(&mut self, mut piece: Piece, pos: &Position) {
+        piece.shift_right(pos.col);
+        unsafe {
+            self.buff[pos.row + 0] ^= piece.parts[0];
+            self.buff[pos.row + 1] ^= piece.parts[1];
+            self.buff[pos.row + 2] ^= piece.parts[2];
+            self.buff[pos.row + 3] ^= piece.parts[3];
+        }
     }
 
     fn generate_fences(&mut self) {
