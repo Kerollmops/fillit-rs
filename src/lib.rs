@@ -5,11 +5,13 @@ mod piece;
 mod playground;
 mod tetrimino;
 mod visual_map;
+mod position;
 
 pub use self::piece::Piece;
 pub use self::playground::Playground;
 pub use self::tetrimino::Tetrimino;
 pub use self::visual_map::VisualMap;
+pub use self::position::Position;
 
 const NUMBER_TETRIMINOS: usize = 26;
 
@@ -180,18 +182,6 @@ pub fn find_best_fit(raw_tetriminos: &[Tetrimino]) -> VisualMap {
 
     let solution = raw_tetriminos.iter().copied().zip(solution.iter().copied()).collect();
     VisualMap::new(solution, pg.size())
-}
-
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Position {
-    pub col: usize,
-    pub row: usize,
-}
-
-impl Position {
-    pub fn new(col: usize, row: usize) -> Position {
-        Position { col, row }
-    }
 }
 
 #[cfg(test)]
