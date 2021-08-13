@@ -175,21 +175,21 @@ fn wasted(tetriminos: &Tetriminos, pg: &Playground) -> usize {
     pos.row.saturating_sub(1) * pg.size() + pos.col
 }
 
-fn compute_wastable(pg: &Playground, tetriminos_count: usize) -> usize {
-    pg.size() * pg.size() - tetriminos_count * Tetrimino::TILE_COUNT
+fn compute_wastable(pg_size: usize, tetriminos_count: usize) -> usize {
+    pg_size * pg_size - tetriminos_count * Tetrimino::TILE_COUNT
 }
 
 pub fn find_best_fit(raw_tetriminos: &[Tetrimino]) -> VisualMap {
     let tetriminos_count = raw_tetriminos.len();
     let mut solution = [Position::default(); 26];
     let mut pg = Playground::from_number_tetriminos(tetriminos_count);
-    let mut wastable = compute_wastable(&pg, tetriminos_count);
+    let mut wastable = compute_wastable(pg.size(), tetriminos_count);
     let tetriminos = Tetriminos::from_tetriminos(raw_tetriminos);
 
     eprintln!("Try to fit {} tetriminos in a {} sized map.", tetriminos_count, pg.size());
     while backtrack(&tetriminos, 0, &mut pg, wastable, &mut solution[..tetriminos_count]) == NeedNewMap {
         pg = Playground::from_size(pg.size() + 1);
-        wastable = compute_wastable(&pg, tetriminos_count);
+        wastable = compute_wastable(pg.size(), tetriminos_count);
         eprintln!("Try to fit {} tetriminos in a {} sized map.", tetriminos_count, pg.size());
     }
 
