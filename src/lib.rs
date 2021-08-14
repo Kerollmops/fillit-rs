@@ -68,18 +68,19 @@ fn backtrack(
 
     while pg.size().checked_sub(tsize.row).map_or(false, |s| pos.row <= s) {
         while pg.size().checked_sub(tsize.col).map_or(false, |s| pos.col <= s) {
-            // If we waste too much tiles it means that we can move to
-            // the next position for this tetrimino.
-            if wastable < 4 && pos.row < 2 {
-                let wasted = pg.wasted_first_line_tiles().count_ones();
-                if wasted > 0 && wasted < 4 {
-                    pos.col += 1;
-                    continue;
-                }
-            }
-
             if pg.can_write_piece(tpiece, &pos) {
                 pg.xor_piece(tpiece, &pos);
+
+                // If we waste too much tiles it means that we can move to
+                // the next position for this tetrimino.
+                if wastable < 4 && pos.row < 2 {
+                    let wasted = pg.wasted_first_line_tiles().count_ones();
+                    if wasted > 0 && wasted < 4 {
+                        pg.xor_piece(tpiece, &pos);
+                        pos.col += 1;
+                        continue;
+                    }
+                }
 
                 // We saved the farthest position available for the next tetrimino of the same type.
                 let jump = tetriminos.jump_columns[i];
