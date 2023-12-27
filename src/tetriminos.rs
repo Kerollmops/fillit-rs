@@ -1,3 +1,5 @@
+use enum_ordinalize::Ordinalize;
+
 use crate::{Piece, Position, Tetrimino, NUMBER_TETRIMINOS};
 
 pub struct Tetriminos {

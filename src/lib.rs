@@ -1,4 +1,5 @@
 use anyhow::{ensure, Context};
+use enum_ordinalize::Ordinalize;
 
 mod boolean_maps;
 mod piece;
@@ -128,7 +129,7 @@ pub fn find_best_fit(raw_tetriminos: &[Tetrimino]) -> VisualMap {
     let mut solution = [Position::default(); NUMBER_TETRIMINOS];
     let mut pg = Playground::from_number_tetriminos(tetriminos_count);
     // The farthest position for a given piece type.
-    let mut farthest = [Position::default(); Tetrimino::variant_count()];
+    let mut farthest = [Position::default(); Tetrimino::VARIANT_COUNT];
     let mut wastable = compute_wastable(pg.size(), tetriminos_count);
     let tetriminos = Tetriminos::from_tetriminos(raw_tetriminos);
 

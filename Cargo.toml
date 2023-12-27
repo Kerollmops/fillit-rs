@@ -5,8 +5,8 @@ authors = ["Clément Renault <clement@meilisearch.com>"]
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.38"
-enum-ordinalize = "3.1.9"
+anyhow = "1.0.77"
+enum-ordinalize = "4.3.0"
 
 [profile.release]
 debug = true
